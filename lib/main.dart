@@ -1,16 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_icons_null_safe/flutter_icons_null_safe.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:path_provider/path_provider.dart';
+import 'data/event_database.dart';
+import 'models/event.dart';
+import 'dart:io';
 
-void main() {
-  runApp(MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final appDocumentDir = await getApplicationDocumentsDirectory();
+  Hive.init(appDocumentDir.path); // Initialize Hive with the documents directory
+  final databaseService = DatabaseService();
+  await databaseService.init();
+  runApp(MyApp(databaseService: databaseService));
+  print('Hive is storing data at: ${appDocumentDir.path}');
 }
 
 class MyApp extends StatelessWidget {
+  final DatabaseService databaseService;
+
+  MyApp({required this.databaseService});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: HomeScreen(),
-      theme: new ThemeData(scaffoldBackgroundColor: Colors.black),
+    return Provider(
+      create: (_) => databaseService,
+      child: MaterialApp(
+        home: HomeScreen(),
+      ),
     );
   }
 }
@@ -21,131 +39,179 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  double _buttonBarHeight = 0;
-
-  void _toggleButtonBar() {
-    setState(() {
-      _buttonBarHeight = _buttonBarHeight == 0 ? 100 : 0;
-    });
-  }
+  List<Event> events = [];
+  List<FlSpot> annotations = [];
+  List<TextAnnotation> textAnnotations = [];
 
   @override
   Widget build(BuildContext context) {
+    final databaseService = Provider.of<DatabaseService>(context);
+
     return Scaffold(
-      extendBody: true,
-            backgroundColor: Colors.black, // Set the background color to black
-appBar: AppBar(
-        title: Text('Drink Smart'),
-        actions: [
-          PopupMenuButton(
-            onSelected: (value) {
-              if (value == 'whatDidIDo') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => WhatDidIDoScreen()),
-                );
-              }
-            },
-            itemBuilder: (BuildContext context) {
-              return [
-                PopupMenuItem(
-                  value: 'whatDidIDo',
-                  child: Text('What did I do!'),
+      appBar: AppBar(title: Text('Simple App')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildRecordButton(databaseService),
+            _buildClearDatabaseButton(databaseService),
+            _buildGraph(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecordButton(DatabaseService databaseService) {
+    return ElevatedButton(
+      onPressed: () async {
+        await databaseService.addEvent(Event(timestamp: DateTime.now()));
+        setState(() {
+          events = [...events, Event(timestamp: DateTime.now())];
+        });
+      },
+      child: Text('Record Button Push'),
+    );
+  }
+
+  Widget _buildClearDatabaseButton(DatabaseService databaseService) {
+    return ElevatedButton(
+      onPressed: () async {
+        await databaseService.clearDatabase();
+        setState(() {
+          events = [];
+          annotations = [];
+          textAnnotations = [];
+        });
+      },
+      child: Text('Clear Database'),
+    );
+  }
+
+  Widget _buildGraph() {
+    return Expanded(
+      child: Container(
+        color: Colors.yellow.withOpacity(0.3), // Visual debugging
+        child: Stack(
+          children: [
+            BarChart(
+              _buildBarChartData(),
+              swapAnimationDuration: Duration(milliseconds: 150), // Optional
+              swapAnimationCurve: Curves.linear, // Optional
+            ),
+            ...textAnnotations.map((annotation) => Positioned(
+              left: annotation.position.dx,
+              top: annotation.position.dy,
+              child: Text(
+                annotation.text,
+                style: TextStyle(
+                  color: Colors.black,
+                  backgroundColor: Colors.white,
                 ),
-              ];
-            },
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          // Main content
-          Container(
-            color: Colors.white,
-            child: Center(
-              child: Text('Your main content here'),
-            ),
-          ),
-          // Slide-up button bar
-          AnimatedPositioned(
-            duration: Duration(milliseconds: 300),
-            bottom: _buttonBarHeight,
-            left: 0,
-            right: 0,
-            child: Container(
-              color: Colors.grey,
-              height: 100,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  ClipOval(
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.all(15),
-                      ),
-                      child: Icon(MaterialCommunityIcons.beer),
-                    ),
-                  ),
-                  ClipOval(
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.all(15),
-                      ),
-                      child: Icon(MaterialCommunityIcons.glass_wine),
-                    ),
-                  ),
-                  ClipOval(
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.all(15),
-                      ),
-                      child: const Icon(MaterialCommunityIcons.glass_cocktail),
-                    ),
-                  ),
-                  ClipOval(
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.all(15),
-                      ),
-                      child: Icon(MaterialCommunityIcons.water),
-                    ),
-                  ),
-                ],
               ),
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  BarChartData _buildBarChartData() {
+    return BarChartData(
+      barGroups: _generateBarGroups(),
+      titlesData: FlTitlesData(
+        leftTitles: AxisTitles(
+          sideTitles: SideTitles(showTitles: true),
+        ),
+        bottomTitles: AxisTitles(
+          sideTitles: SideTitles(showTitles: true),
+        ),
+      ),
+      borderData: FlBorderData(show: true),
+      gridData: FlGridData(show: true),
+      barTouchData: BarTouchData(
+        touchCallback: (FlTouchEvent event, barTouchResponse) async {
+          if (event is FlTapUpEvent) {
+            final position = event.localPosition;
+            print('Graph tapped at: $position'); // Debugging line
+            final annotation = await _showAnnotationDialog(context);
+            if (annotation != null) {
+              setState(() {
+                textAnnotations.add(TextAnnotation(
+                  position: position,
+                  text: annotation,
+                ));
+                print('Annotation added: $position, $annotation'); // Debugging line
+                print('Current annotations: $textAnnotations'); // Debugging line
+              });
+            }
+          }
+        },
+      ),
+    );
+  }
+
+  List<BarChartGroupData> _generateBarGroups() {
+    Map<int, int> eventCounts = {};
+    for (var event in events) {
+      int minute = event.timestamp.minute;
+      eventCounts[minute] = (eventCounts[minute] ?? 0) + 1;
+    }
+
+    List<BarChartGroupData> barGroups = [];
+    for (int minute = 0; minute < 60; minute++) {
+      barGroups.add(
+        BarChartGroupData(
+          x: minute,
+          barRods: [
+            BarChartRodData(
+              toY: eventCounts[minute]?.toDouble() ?? 0,
+              color: Colors.blue,
             ),
+          ],
+        ),
+      );
+    }
+
+    print('Bar Groups: $barGroups'); // Debugging line
+
+    return barGroups;
+  }
+
+  Future<String?> _showAnnotationDialog(BuildContext context) async {
+    TextEditingController controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Add Annotation'),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(hintText: 'Enter annotation'),
           ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _toggleButtonBar,
-        child: Icon(Icons.keyboard_arrow_up),
-      ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Add'),
+              onPressed: () {
+                Navigator.of(context).pop(controller.text);
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }
 
-class WhatDidIDoScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('What Did I Do!'),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context); // Navigate back to the previous screen
-          },
-        ),
-      ),
-      backgroundColor: Colors.black, // Set the background color to black
-      
-      body: Center(
-        child: Text('This is the "What Did I Do!" screen'),
-      ),
-    );
-  }
+class TextAnnotation {
+  final Offset position;
+  final String text;
+
+  TextAnnotation({required this.position, required this.text});
 }
