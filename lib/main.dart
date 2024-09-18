@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'data/event_database.dart';
 import 'models/event.dart';
 import 'dart:io';
+import 'signup_screen.dart'; // Import the signup screen
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildRecordButton(databaseService),
             _buildClearDatabaseButton(databaseService),
             _buildGraph(),
+            _buildSignupButton(),
           ],
         ),
       ),
@@ -113,6 +115,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSignupButton() {
+    return ElevatedButton(
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => SignupScreen()),
+        );
+      },
+      child: Text('Go to Signup'),
     );
   }
 
