@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:io'; // Import for SocketException
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SignupScreen extends StatefulWidget {
   final Key? key;
@@ -13,6 +17,7 @@ class SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _storage = FlutterSecureStorage();
 
   @override
   void dispose() {
@@ -21,20 +26,55 @@ class SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _submitForm() {
+  Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      // Handle form submission, e.g., send data to backend
-      print('Email: ${_emailController.text}');
-      print('Password: ${_passwordController.text}');
-      // You can add your backend integration or local storage logic here
+      final email = _emailController.text;
+      final password = _passwordController.text;
 
-      // Show a success message or navigate to another screen
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Signup successful!')),
-      );
+      try {
+        // Send signup request to the server
+        final response = await http.post(
+          Uri.parse('https://your-server-url.com/signup'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'email': email, 'password': password}),
+        );
 
-      // Optionally, navigate to another screen
-      Navigator.pop(context);
+        if (response.statusCode == 200) {
+          final responseBody = jsonDecode(response.body);
+          final jwt = responseBody['token'];
+
+          // Store the JWT securely
+          await _storage.write(key: 'jwt', value: jwt);
+
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Signup successful!')),
+          );
+
+          // Navigate to another screen or home screen
+          Navigator.pop(context);
+        } else {
+          // Show error message for unsuccessful signup
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Signup failed: ${response.reasonPhrase}')),
+          );
+        }
+      } on SocketException {
+        // Handle network error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No such server. Please check your internet connection and try again.')),
+        );
+      } on FormatException {
+        // Handle JSON format error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unexpected response format. Please try again later.')),
+        );
+      } catch (e) {
+        // Handle other errors
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Signup failed: $e')),
+        );
+      }
     }
   }
 
