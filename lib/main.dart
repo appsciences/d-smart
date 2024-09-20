@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
-import 'data/event_database.dart';
+import 'data/database.dart';
 import 'home_screen.dart'; // Import the home screen
 import 'vertical_sliders.dart'; // Import the vertical sliders
-
+import 'session_display.dart'; // Import the session display
+import 'models/session.dart'; // Import the session model
+import 'models/event.dart'; // Import the event model
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final appDocumentDir = await getApplicationDocumentsDirectory();
   Hive.init(appDocumentDir.path); // Initialize Hive with the documents directory
+ // Hive.registerAdapter(SessionAdapter());
+  //Hive.registerAdapter(EventAdapter());
   final databaseService = DatabaseService();
   await databaseService.init();
   runApp(MyApp(databaseService: databaseService));
@@ -58,6 +62,15 @@ class HomeSwitcher extends StatelessWidget {
                 );
               },
               child: Text('Go to Vertical Sliders'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SessionDisplay()),
+                );
+              },
+              child: Text('Go to Session Display'),
             ),
           ],
         ),

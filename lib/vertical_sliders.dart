@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+import 'models/session.dart';
 
 class VerticalSliders extends StatefulWidget {
   @override
@@ -9,13 +11,13 @@ class _VerticalSlidersState extends State<VerticalSliders> {
   List<int> sliderValues = [0, 0, 0, 0];
   final List<String> labels = ['Beer', 'Wine', 'Liquor', 'Food'];
   String selectedTrigger = 'Trigger1';
+  Session? currentSession;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Row(
-          mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Text('Triggers: '),
             DropdownButton<String>(
@@ -37,14 +39,14 @@ class _VerticalSlidersState extends State<VerticalSliders> {
             SizedBox(width: 16.0),
             ElevatedButton(
               onPressed: () {
-                // Start session logic
+                startSession();
               },
               child: Text('Start Session'),
             ),
             SizedBox(width: 8.0),
             ElevatedButton(
               onPressed: () {
-                // End session logic
+                endSession();
               },
               child: Text('End Session'),
             ),
@@ -64,6 +66,31 @@ class _VerticalSlidersState extends State<VerticalSliders> {
         ),
       ),
     );
+  }
+
+  void startSession() {
+    setState(() {
+      currentSession = Session(
+        startTimestamp: DateTime.now(),
+        sliderValues: List.from(sliderValues),
+        trigger: selectedTrigger,
+      );
+    });
+  }
+
+  void endSession() async {
+    if (currentSession != null) {
+      currentSession!.endTimestamp = DateTime.now();
+      currentSession!.sliderValues = List.from(sliderValues);
+      currentSession!.trigger = selectedTrigger;
+
+      var box = await Hive.openBox<Session>('sessions');
+      await box.add(currentSession!);
+
+      setState(() {
+        currentSession = null;
+      });
+    }
   }
 
   Widget _buildVerticalSlider(int index) {
@@ -116,7 +143,7 @@ class _VerticalSlidersState extends State<VerticalSliders> {
           },
         ),
         Text(
-          sliderValues[index].toString(),
+          '${labels[index]}: ${sliderValues[index]}',
           style: TextStyle(color: Colors.white),
         ),
       ],

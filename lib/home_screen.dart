@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'data/event_database.dart';
+import 'data/database.dart';
 import 'models/event.dart';
 import 'signup_screen.dart';
 
