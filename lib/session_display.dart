@@ -11,7 +11,7 @@ class _SessionDisplayState extends State<SessionDisplay> {
   @override
   void initState() {
     super.initState();
-    // _addFakeSessions();
+    _addFakeSessions();
   }
 
   Future<void> _addFakeSessions() async {
@@ -89,42 +89,79 @@ class _SessionDisplayState extends State<SessionDisplay> {
 
     final offset = session.startTimestamp.difference(earliestStartTime).inMinutes * 2; // Calculate offset based on start time
 
-    return Container(
-      margin: EdgeInsets.only(left: offset.toDouble(), top: 8.0, bottom: 8.0),
-      child: Column(
-        children: [
-          if (session.trigger != null)
-            Text(session.trigger!, style: TextStyle(fontWeight: FontWeight.bold)),
-          Container(
-            width: width < minWidth ? minWidth : width, // Apply minimum width
-            height: height > maxHeight ? maxHeight : height, // Apply maximum height
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.black),
-              borderRadius: BorderRadius.circular(8.0),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: List.generate(session.sliderValues.length, (index) {
-                final value = session.sliderValues[index];
-                final color = _getColorForIndex(index);
-                final proportion = value / totalValue;
-                return Expanded(
-                  flex: (proportion * 100).toInt(),
-                  child: Container(
-                    color: color,
-                    child: Center(
-                      child: Text(
-                        '${_getNameForIndex(index)}: $value',
-                        style: TextStyle(color: Colors.white),
+    return GestureDetector(
+      onTap: () => _showSessionDetails(session),
+      child: Container(
+        margin: EdgeInsets.only(left: offset.toDouble(), top: 8.0, bottom: 8.0),
+        child: Column(
+          children: [
+            if (session.trigger != null)
+              Text(session.trigger!, style: TextStyle(fontWeight: FontWeight.bold)),
+            Container(
+              width: width < minWidth ? minWidth : width, // Apply minimum width
+              height: height > maxHeight ? maxHeight : height, // Apply maximum height
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.black),
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: List.generate(session.sliderValues.length, (index) {
+                  final value = session.sliderValues[index];
+                  final color = _getColorForIndex(index);
+                  final proportion = value / totalValue;
+                  return Expanded(
+                    flex: (proportion * 100).toInt(),
+                    child: Container(
+                      color: color,
+                      child: Center(
+                        child: Text(
+                          '${_getNameForIndex(index)}: $value',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ),
-                  ),
-                );
-              }),
+                  );
+                }),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  void _showSessionDetails(Session session) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Session Details'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Trigger: ${session.trigger ?? 'N/A'}'),
+              Text('Start Time: ${session.startTimestamp}'),
+              Text('End Time: ${session.endTimestamp ?? 'N/A'}'),
+              Text('Slider Values:'),
+              ...session.sliderValues.asMap().entries.map((entry) {
+                int index = entry.key;
+                int value = entry.value;
+                return Text('${_getNameForIndex(index)}: $value');
+              }).toList(),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Close'),
+            ),
+          ],
+        );
+      },
     );
   }
 
