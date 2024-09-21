@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import 'dart:async';
 import 'models/session.dart';
 
 class VerticalSliders extends StatefulWidget {
@@ -12,6 +13,63 @@ class _VerticalSlidersState extends State<VerticalSliders> {
   final List<String> labels = ['Beer', 'Wine', 'Liquor', 'Food'];
   String selectedTrigger = 'Trigger1';
   Session? currentSession;
+  bool _isSessionStarted = false;
+  bool _canEndSession = false;
+  DateTime? _sessionStartTime;
+  Timer? _timer;
+  Duration _elapsedTime = Duration.zero;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startSession() {
+    setState(() {
+      _isSessionStarted = true;
+      _sessionStartTime = DateTime.now();
+      _canEndSession = false;
+      _elapsedTime = Duration.zero;
+      currentSession = Session(
+        startTimestamp: _sessionStartTime!,
+        sliderValues: List.from(sliderValues),
+        trigger: selectedTrigger,
+      );
+    });
+
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        _elapsedTime = DateTime.now().difference(_sessionStartTime!);
+      });
+    });
+
+    // Enable the "End Session" button after a sufficient amount of time has passed
+    Future.delayed(Duration(minutes: 5), () {
+      setState(() {
+        _canEndSession = true;
+      });
+    });
+  }
+
+  void _endSession() async {
+    if (currentSession != null) {
+      currentSession!.endTimestamp = DateTime.now();
+      currentSession!.sliderValues = List.from(sliderValues);
+      currentSession!.trigger = selectedTrigger;
+
+      var box = await Hive.openBox<Session>('sessions');
+      await box.add(currentSession!);
+
+      setState(() {
+        currentSession = null;
+        _isSessionStarted = false;
+        _canEndSession = false;
+        _timer?.cancel();
+        _elapsedTime = Duration.zero;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,16 +96,20 @@ class _VerticalSlidersState extends State<VerticalSliders> {
             ),
             SizedBox(width: 16.0),
             ElevatedButton(
-              onPressed: () {
-                startSession();
-              },
+              onPressed: _isSessionStarted ? null : _startSession,
               child: Text('Start Session'),
             ),
             SizedBox(width: 8.0),
+            Text(
+              _formatElapsedTime(_elapsedTime),
+              style: TextStyle(
+                color: _elapsedTime < Duration(minutes: 5) ? Colors.red : Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(width: 8.0),
             ElevatedButton(
-              onPressed: () {
-                endSession();
-              },
+              onPressed: _canEndSession ? _endSession : null,
               child: Text('End Session'),
             ),
           ],
@@ -68,29 +130,11 @@ class _VerticalSlidersState extends State<VerticalSliders> {
     );
   }
 
-  void startSession() {
-    setState(() {
-      currentSession = Session(
-        startTimestamp: DateTime.now(),
-        sliderValues: List.from(sliderValues),
-        trigger: selectedTrigger,
-      );
-    });
-  }
-
-  void endSession() async {
-    if (currentSession != null) {
-      currentSession!.endTimestamp = DateTime.now();
-      currentSession!.sliderValues = List.from(sliderValues);
-      currentSession!.trigger = selectedTrigger;
-
-      var box = await Hive.openBox<Session>('sessions');
-      await box.add(currentSession!);
-
-      setState(() {
-        currentSession = null;
-      });
-    }
+  String _formatElapsedTime(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$twoDigitMinutes:$twoDigitSeconds";
   }
 
   Widget _buildVerticalSlider(int index) {
