@@ -91,9 +91,13 @@ class _VerticalSlidersState extends State<VerticalSliders> {
     int sum = _calculateSum();
     int potentialSum = sum + multipliers[index];
 
-    if (sum >= 20 || potentialSum >= 20) {
+    if (sum >= 20) {
       return Colors.redAccent;
-    } else if (sum >= 10 || potentialSum >= 10) {
+    } else if (potentialSum >= 20) {
+      return Colors.redAccent;
+    } else if (sum >= 10) {
+      return Colors.orange;
+    } else if (potentialSum >= 10) {
       return Colors.orange;
     } else {
       return Colors.white;
@@ -187,24 +191,29 @@ class _VerticalSlidersState extends State<VerticalSliders> {
             ),
             child: Slider(
               value: actionSliderValues[index],
-              min: 0,
+              min: -1,
               max: 1,
-              divisions: 1,
-              label: 'Increment',
+              divisions: 2,
+              label: actionSliderValues[index] == 0 ? 'Neutral' : (actionSliderValues[index] > 0 ? 'Increment' : 'Decrement'),
               onChanged: (double value) {
                 setState(() {
                   actionSliderValues[index] = value;
+                });
+              },
+              onChangeEnd: (double value) {
+                setState(() {
                   if (value == 1) {
                     sliderValues[index]++;
                     if (currentSession != null) {
                       currentSession!.sliderValues[index]++;
                     }
+                  } else if (value == -1) {
+                    sliderValues[index] = (sliderValues[index] > 0) ? sliderValues[index] - 1 : 0;
+                    if (currentSession != null) {
+                      currentSession!.sliderValues[index] = (currentSession!.sliderValues[index] > 0) ? currentSession!.sliderValues[index] - 1 : 0;
+                    }
                   }
-                });
-              },
-              onChangeEnd: (double value) {
-                setState(() {
-                  // Snap back to the initial position
+                  // Snap back to the middle position
                   actionSliderValues[index] = 0;
                 });
               },
