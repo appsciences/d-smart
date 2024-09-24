@@ -11,6 +11,8 @@ class VerticalSliders extends StatefulWidget {
 class _VerticalSlidersState extends State<VerticalSliders> {
   List<int> sliderValues = [0, 0, 0, 0];
   final List<String> labels = ['Beer', 'Wine', 'Liquor', 'Food'];
+  final List<Color> ballColors = [Colors.brown[300]!, Colors.yellow[200]!, Colors.pink[200]!, Colors.purple[200]!];
+  final List<int> multipliers = [1, 2, 3, 0];
   String selectedTrigger = 'Trigger1';
   Session? currentSession;
   bool _isSessionStarted = false;
@@ -69,6 +71,27 @@ class _VerticalSlidersState extends State<VerticalSliders> {
         _timer?.cancel();
         _elapsedTime = Duration.zero;
       });
+    }
+  }
+
+  int _calculateSum() {
+    int sum = 0;
+    for (int i = 0; i < sliderValues.length; i++) {
+      sum += sliderValues[i] * multipliers[i];
+    }
+    return sum;
+  }
+
+  Color _getSliderColor(int index) {
+    int sum = _calculateSum();
+    int potentialSum = sum + multipliers[index];
+
+    if (sum >= 20 || potentialSum >= 20) {
+      return Colors.red;
+    } else if (sum >= 10 || potentialSum >= 10) {
+      return Colors.orange;
+    } else {
+      return Colors.white;
     }
   }
 
@@ -148,29 +171,39 @@ class _VerticalSlidersState extends State<VerticalSliders> {
         ),
         RotatedBox(
           quarterTurns: -1,
-          child: Slider(
-            value: actionSliderValues[index],
-            min: 0,
-            max: 1,
-            divisions: 1,
-            label: 'Increment',
-            onChanged: (double value) {
-              setState(() {
-                actionSliderValues[index] = value;
-                if (value == 1) {
-                  sliderValues[index]++;
-                  if (currentSession != null) {
-                    currentSession!.sliderValues[index]++;
+          child: SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: _getSliderColor(index),
+              inactiveTrackColor: _getSliderColor(index).withOpacity(0.5),
+              thumbColor: ballColors[index],
+              overlayColor: ballColors[index].withOpacity(0.2),
+              thumbShape: RoundSliderThumbShape(enabledThumbRadius: 12.0),
+              overlayShape: RoundSliderOverlayShape(overlayRadius: 24.0),
+            ),
+            child: Slider(
+              value: actionSliderValues[index],
+              min: 0,
+              max: 1,
+              divisions: 1,
+              label: 'Increment',
+              onChanged: (double value) {
+                setState(() {
+                  actionSliderValues[index] = value;
+                  if (value == 1) {
+                    sliderValues[index]++;
+                    if (currentSession != null) {
+                      currentSession!.sliderValues[index]++;
+                    }
                   }
-                }
-              });
-            },
-            onChangeEnd: (double value) {
-              setState(() {
-                // Snap back to the initial position
-                actionSliderValues[index] = 0;
-              });
-            },
+                });
+              },
+              onChangeEnd: (double value) {
+                setState(() {
+                  // Snap back to the initial position
+                  actionSliderValues[index] = 0;
+                });
+              },
+            ),
           ),
         ),
         Text(
