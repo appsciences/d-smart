@@ -83,11 +83,16 @@ class _VerticalSlidersState extends State<VerticalSliders> {
   }
 
   Color _getSliderColor(int index) {
+    if (index == 3) {
+      // Food slider should always be white
+      return Colors.white;
+    }
+
     int sum = _calculateSum();
     int potentialSum = sum + multipliers[index];
 
     if (sum >= 20 || potentialSum >= 20) {
-      return Colors.red;
+      return Colors.redAccent;
     } else if (sum >= 10 || potentialSum >= 10) {
       return Colors.orange;
     } else {
@@ -173,8 +178,8 @@ class _VerticalSlidersState extends State<VerticalSliders> {
           quarterTurns: -1,
           child: SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              activeTrackColor: _getSliderColor(index),
-              inactiveTrackColor: _getSliderColor(index).withOpacity(0.5),
+              activeTrackColor: _getSliderColor(index), // Controls the color during sliding
+              inactiveTrackColor: _getSliderColor(index), // Controls the dormant color
               thumbColor: ballColors[index],
               overlayColor: ballColors[index].withOpacity(0.2),
               thumbShape: RoundSliderThumbShape(enabledThumbRadius: 12.0),
