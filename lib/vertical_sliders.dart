@@ -18,6 +18,7 @@ class _VerticalSlidersState extends State<VerticalSliders> {
   DateTime? _sessionStartTime;
   Timer? _timer;
   Duration _elapsedTime = Duration.zero;
+  List<double> actionSliderValues = [0.0, 0.0, 0.0, 0.0];
 
   @override
   void dispose() {
@@ -122,7 +123,7 @@ class _VerticalSlidersState extends State<VerticalSliders> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: List.generate(4, (index) {
-              return _buildVerticalSlider(index);
+              return _buildActionSlider(index);
             }),
           ),
         ),
@@ -137,7 +138,7 @@ class _VerticalSlidersState extends State<VerticalSliders> {
     return "$twoDigitMinutes:$twoDigitSeconds";
   }
 
-  Widget _buildVerticalSlider(int index) {
+  Widget _buildActionSlider(int index) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -145,46 +146,32 @@ class _VerticalSlidersState extends State<VerticalSliders> {
           labels[index],
           style: TextStyle(color: Colors.white, fontSize: 16.0),
         ),
-        IconButton(
-          icon: Icon(Icons.add, color: Colors.white),
-          onPressed: () {
-            setState(() {
-              sliderValues[index] = (sliderValues[index] + 1).clamp(0, 100);
-            });
-          },
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.green,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(16.0),
-              bottom: Radius.circular(16.0),
-            ),
+        RotatedBox(
+          quarterTurns: -1,
+          child: Slider(
+            value: actionSliderValues[index],
+            min: 0,
+            max: 1,
+            divisions: 1,
+            label: 'Increment',
+            onChanged: (double value) {
+              setState(() {
+                actionSliderValues[index] = value;
+                if (value == 1) {
+                  sliderValues[index]++;
+                  if (currentSession != null) {
+                    currentSession!.sliderValues[index]++;
+                  }
+                }
+              });
+            },
+            onChangeEnd: (double value) {
+              setState(() {
+                // Snap back to the initial position
+                actionSliderValues[index] = 0;
+              });
+            },
           ),
-          padding: EdgeInsets.symmetric(vertical: 8.0),
-          child: RotatedBox(
-            quarterTurns: -1,
-            child: Slider(
-              value: sliderValues[index].toDouble(),
-              min: 0,
-              max: 100,
-              divisions: 100,
-              label: sliderValues[index].toString(),
-              onChanged: (double newValue) {
-                setState(() {
-                  sliderValues[index] = newValue.toInt();
-                });
-              },
-            ),
-          ),
-        ),
-        IconButton(
-          icon: Icon(Icons.remove, color: Colors.white),
-          onPressed: () {
-            setState(() {
-              sliderValues[index] = (sliderValues[index] - 1).clamp(0, 100);
-            });
-          },
         ),
         Text(
           '${labels[index]}: ${sliderValues[index]}',
