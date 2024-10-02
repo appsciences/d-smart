@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'data/database.dart';
 import 'home_screen.dart'; // Import the home screen
+import 'drink_display.dart';
 import 'vertical_sliders.dart'; // Import the vertical sliders
 import 'session_display.dart'; // Import the session display
 import 'models/session.dart'; // Import the session model
@@ -71,6 +72,15 @@ class HomeSwitcher extends StatelessWidget {
                 );
               },
               child: Text('Go to Session Display'),
+            ),
+             ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => DrinkDisplay(startTime: DateTime.now().subtract(Duration(days: 1)),endTime: DateTime.now()))
+                  );
+              },
+              child: Text('Go to Drink Display'),
             ),
           ],
         ),
