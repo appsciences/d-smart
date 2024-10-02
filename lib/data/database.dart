@@ -33,6 +33,7 @@ class SessionAdapter extends TypeAdapter<Session> {
       endTimestamp: reader.read() as DateTime?,
       sliderValues: (reader.read() as List).cast<int>(),
       trigger: reader.read() as String?,
+      sliderEvents: [],
     );
   }
 

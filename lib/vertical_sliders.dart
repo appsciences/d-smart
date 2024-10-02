@@ -38,6 +38,7 @@ class _VerticalSlidersState extends State<VerticalSliders> {
         startTimestamp: _sessionStartTime!,
         sliderValues: List.from(sliderValues),
         trigger: selectedTrigger,
+        sliderEvents: [],
       );
     });
 
